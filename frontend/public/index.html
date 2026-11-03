@@ -237,7 +237,7 @@
 
     // O contrato não permite listar o mapping `users`, então os codinomes ficam aqui.
     // Os endereços são lidos do contrato (users(codinome)).
-    const CODINOMES = ["roberta", "owner", "nome1", "nome2", "nome3", "nome4", "nome5"];
+    const CODINOMES = ["roberta", "nome1", "nome2", "nome3", "nome4", "nome5"];
 
     const CONTRACT_ABI = [
         "function owner() view returns (address)",
@@ -479,6 +479,7 @@
                 const known = addr !== ethers.constants.AddressZero;
                 return {
                     codinome: c,
+                    addr,
                     known,
                     balance: known ? await contract.balanceOf(addr) : ethers.constants.Zero,
                     voted: isUser && known ? await contract.hasVote(myName, c) : false
@@ -500,19 +501,18 @@
                 ? `${votes} dado(s) · bônus em ${10 - (votes % 10)}`
                 : "-";
             $("adminPanel").style.display = isAdmin ? "block" : "none";
-            // Superusuário também vota: a caixa de voto aparece para todos
-            $("voteBox").style.display = "block";
+            // Owner não vota: sem registro no construtor, ele só vê o painel admin
+            $("voteBox").style.display = (isUser || !isAdmin) ? "block" : "none";
 
             // Votação
-            ui.canVote = voting && (isUser || isAdmin);
+            ui.canVote = isUser && voting;
             $("voteHint").textContent = !isUser
-                ? (isAdmin
-                    ? "Seu endereço não está em users: o contrato recusa o voto até você ser registrado (Atualizar usuário)."
-                    : "Seu endereço não está autorizado a votar.")
+                ? "Seu endereço não está autorizado a votar."
                 : (!voting ? "A votação está pausada." : "");
 
-            // Professora nunca aparece como destino de voto/emissão nem no ranking
-            const students = rows.filter((r) => r.known && r.codinome !== PROFESSORA);
+            // Professora e owner nunca aparecem como destino de voto/emissão nem no ranking
+            const students = rows.filter((r) =>
+                r.known && r.codinome !== PROFESSORA && r.addr.toLowerCase() !== owner.toLowerCase());
 
             setOptions($("voteCandidate"), students
                 .filter((r) => r.codinome !== myName)
@@ -571,11 +571,20 @@
         }
     }
 
-    function handleVote() {
+    async function handleVote() {
+        if (!contract) return;
         const cand = $("voteCandidate").value;
         const amount = parseInt($("voteAmount").value, 10);
         if (!cand) return setMsg("Escolha um aluno.", "err");
+        if (cand === PROFESSORA) {
+            return setMsg("A professora não pode receber votos.", "err");
+        }
         if (!(amount >= 1 && amount <= 2)) return setMsg("Informe 1 ou 2 Turings.", "err");
+        try { // confere o estado atual, sem esperar o próximo polling
+            if (!(await contract.voting())) return setMsg("A votação está pausada.", "err");
+        } catch (err) {
+            return setMsg(errMsg(err), "err");
+        }
         sendTx(() => contract.vote(cand, amount), "Voto registrado!");
     }
 
