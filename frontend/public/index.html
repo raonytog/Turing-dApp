@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>dApp Turing 2.0</title>
+    <script src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js" type="application/javascript"></script>
+    <style>
+        :root {
+            --bg: #eceff4;
+            --panel: #ffffff;
+            --ink: #1c2733;
+            --muted: #5d6b7a;
+            --line: #d9dfe7;
+            --accent: #4b2a82;
+            --accent-hover: #371e61;
+            --gold: #b07d12;
+            --ok: #1e7a46;
+            --danger: #b3261e;
+            --danger-hover: #8f1d17;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.5;
+        }
+        .wrap { max-width: 1040px; margin: 0 auto; padding: 24px 20px 48px; }
+
+        /* Cabeçalho */
+        .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-bottom: 20px; }
+        .brand .title { display: flex; align-items: center; gap: 14px; }
+        .brand h1 { margin: 0; font-size: 1.6rem; letter-spacing: -0.01em; }
+        .chain { width: 100px; height: 28px; flex: none; color: var(--accent); }
+        .brand p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+        .session { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .whoami { font-size: 0.95rem; text-align: right; }
+        .whoami:empty { display: none; }
+        .whoami .addr { color: var(--muted); font-variant-numeric: tabular-nums; }
+        .whoami .copy { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: 0 0 0 8px; padding: 0; vertical-align: middle; background: #fff; color: var(--accent); border: 1px solid var(--line); }
+        .whoami .copy:hover { background: #f4f0fb; }
+        .whoami .copy.done { color: var(--ok); }
+        .whoami .copy svg { width: 15px; height: 15px; }
+
+        /* Painéis */
+        .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+        .panel h2 { margin: 0 0 14px; font-size: 1.05rem; }
+        .panel h3 { margin: 0 0 10px; font-size: 0.95rem; }
+
+        /* Faixa de status */
+        .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; padding: 0; margin-bottom: 20px; }
+        .stat { padding: 14px 20px; border-left: 1px solid var(--line); min-width: 0; }
+        .stat:first-child { border-left: none; }
+        .stat .label { display: block; color: var(--muted); font-size: 0.85rem; }
+        .stat .value { display: block; font-size: 1.15rem; font-weight: 600; margin-top: 2px; overflow-wrap: anywhere; }
+        .stat .value.small { font-size: 0.9rem; font-weight: 400; color: var(--muted); }
+        .status::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--line); margin-right: 8px; }
+        .status.on::before { background: var(--ok); }
+        .status.off::before { background: var(--danger); }
+
+        /* Layout principal */
+        .layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+        .col { display: flex; flex-direction: column; gap: 20px; }
+
+        /* Formulários */
+        label { display: block; margin-top: 12px; font-size: 0.9rem; font-weight: 600; }
+        label:first-of-type { margin-top: 0; }
+        select, input { width: 100%; padding: 9px 10px; margin-top: 4px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); font: inherit; }
+        select:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        button { width: 100%; padding: 10px 14px; margin-top: 12px; border: none; border-radius: 6px; background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+        button:hover { background: var(--accent-hover); }
+        button:disabled { background: #9aa4b1; cursor: not-allowed; }
+        .btn-green { background: var(--ok); }
+        .btn-green:hover { background: #155c35; }
+        .btn-red { background: var(--danger); }
+        .btn-red:hover { background: var(--danger-hover); }
+        #btnConnect { width: auto; margin-top: 0; }
+        #btnConnect.connected { background: #fff; color: var(--accent); border: 1px solid var(--line); }
+        #btnConnect.connected:hover { background: #f4f0fb; }
+        .row { display: flex; gap: 10px; }
+        .hint { color: var(--danger); font-size: 0.9rem; margin: 10px 0 0; }
+        .hint:empty { display: none; }
+
+        /* Painel admin */
+        .admin { display: none; border-left: 4px solid var(--danger); }
+        .admin section + section { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+
+        /* Mensagens */
+        .msg { padding: 10px 14px; border-radius: 8px; margin-bottom: 20px; word-break: break-word; }
+        .msg:empty { display: none; }
+        .msg.ok { background: #e3f3e9; color: #17592f; }
+        .msg.err { background: #fbe9e7; color: #8f1d17; }
+        .msg.info { background: #ece6f7; color: #371e61; }
+
+        /* Ranking */
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; font-size: 0.85rem; color: var(--muted); font-weight: 500; padding: 0 8px 8px; border-bottom: 1px solid var(--line); }
+        td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        td.pos { width: 36px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--muted); }
+        tr.first td.pos { color: var(--gold); }
+        tr.me td.name { font-weight: 700; }
+        tr.me { background: #f4f0fb; }
+        td.score { width: 55%; }
+        .bar { height: 8px; border-radius: 4px; background: #e6eaf0; overflow: hidden; margin-bottom: 4px; }
+        .bar span { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+        tr.first .bar span { background: var(--gold); }
+        .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+        .empty { color: var(--muted); text-align: center; padding: 18px 8px; }
+
+        @media (max-width: 820px) {
+            .layout { grid-template-columns: minmax(0, 1fr); }
+            .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .stat:nth-child(3) { border-left: none; }
+            .stat:nth-child(n+3) { border-top: 1px solid var(--line); }
+            .whoami { text-align: left; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+
+    <header class="top">
+        <div class="brand">
+            <div class="title">
+                <h1>dApp Turing</h1>
+                <svg class="chain" viewBox="0 0 100 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" role="img" aria-label="Cadeia de blocos">
+                    <title>Blockchain: blocos encadeados por hash</title>
+                    <!-- elos entre os blocos -->
+                    <path d="M25 14h10M60 14h10" />
+                    <circle cx="30" cy="14" r="2" fill="currentColor" stroke="none" />
+                    <circle cx="65" cy="14" r="2" fill="currentColor" stroke="none" />
+                    <!-- blocos -->
+                    <rect x="2" y="3" width="23" height="22" rx="4" />
+                    <path d="M8 10h11M8 15h11M8 20h6" stroke-width="1.5" />
+                    <rect x="37" y="3" width="23" height="22" rx="4" />
+                    <path d="M43 10h11M43 15h11M43 20h6" stroke-width="1.5" />
+                    <rect x="72" y="3" width="23" height="22" rx="4" stroke="var(--gold)" />
+                    <path d="M78 10h11M78 15h11M78 20h6" stroke="var(--gold)" stroke-width="1.5" />
+                </svg>
+            </div>
+            <p>Votação dos projetos finais</p>
+        </div>
+        <div class="session">
+            <div id="whoami" class="whoami"></div>
+            <button id="btnConnect" onclick="toggleWallet()">Conectar carteira</button>
+        </div>
+    </header>
+
+    <div id="msg" class="msg"></div>
+
+    <!-- Status da sessão -->
+    <div class="panel stats">
+        <div class="stat"><span class="label">Perfil</span><span class="value" id="roleDisplay">-</span></div>
+        <div class="stat"><span class="label">Votação</span><span class="value status" id="statusDisplay">-</span></div>
+        <div class="stat"><span class="label">Seu saldo</span><span class="value"><span id="balanceDisplay">0</span> TUR</span></div>
+        <div class="stat"><span class="label">Seus votos</span><span class="value small" id="votesDisplay">-</span></div>
+    </div>
+
+    <div class="layout">
+
+        <!-- Ranking -->
+        <div class="panel">
+            <h2>Ranking</h2>
+            <table>
+                <thead>
+                    <tr><th>#</th><th>Codinome</th><th>Saldo</th></tr>
+                </thead>
+                <tbody id="rankingTable">
+                    <tr><td colspan="3" class="empty">Conecte a carteira para ver o ranking.</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="col">
+
+            <!-- Votação -->
+            <div id="voteBox" class="panel">
+                <h2>Votar</h2>
+                <label for="voteCandidate">Aluno</label>
+                <select id="voteCandidate"></select>
+
+                <label for="voteAmount">Turings (1 ou 2)</label>
+                <input type="number" id="voteAmount" min="1" max="2" step="1" value="1">
+
+                <button id="btnVote" onclick="handleVote()" disabled>Enviar voto</button>
+                <p id="voteHint" class="hint"></p>
+            </div>
+
+            <!-- Painel do Admin (owner ou professora) -->
+            <div id="adminPanel" class="panel admin">
+                <h2>Painel admin</h2>
+
+                <section>
+                    <h3>Emitir Turings</h3>
+                    <label for="issueTarget">Aluno</label>
+                    <select id="issueTarget"></select>
+
+                    <label for="issueAmount">Quantidade</label>
+                    <input type="number" id="issueAmount" min="1" step="1" value="5">
+
+                    <button class="act-admin" onclick="handleIssue()">Emitir Turings</button>
+                </section>
+
+                <section>
+                    <h3>Controle da votação</h3>
+                    <div class="row">
+                        <button class="act-admin btn-green" onclick="handleSetVoting(true)" style="margin-top:0">Ativar</button>
+                        <button class="act-admin btn-red" onclick="handleSetVoting(false)" style="margin-top:0">Pausar</button>
+                    </div>
+                </section>
+
+                <section>
+                    <h3>Atualizar usuário</h3>
+                    <label for="updName">Codinome</label>
+                    <input type="text" id="updName" placeholder="ex.: nome1">
+
+                    <label for="updAddr">Novo endereço</label>
+                    <input type="text" id="updAddr" placeholder="0x...">
+
+                    <button class="act-admin" onclick="handleUpdateUser()">Atualizar usuário</button>
+                </section>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // Endereço impresso pelo deploy (npx hardhat run scripts/deploy.js --network localhost)
+    const CONTRACT_ADDRESS = "0x5fbdb2315678afecb367f032d93f642f64180aa3";
+    const CHAIN_ID = 31337;
+    const PROFESSORA = "roberta"; // codinome da professora no mapping `users`
+
+    // O contrato não permite listar o mapping `users`, então os codinomes ficam aqui.
+    // Os endereços são lidos do contrato (users(codinome)).
+    const CODINOMES = ["roberta", "nome1", "nome2", "nome3", "nome4", "nome5"];
+
+    const CONTRACT_ABI = [
+        "function owner() view returns (address)",
+        "function voting() view returns (bool)",
+        "function decimals() view returns (uint8)",
+        "function balanceOf(address) view returns (uint256)",
+        "function users(string) view returns (address)",
+        "function codinomeOf(address) view returns (string)",
+        "function userVotedNtimes(string) view returns (uint256)",
+        "function hasVote(string, string) view returns (bool)",
+        "function vote(string codinome, uint256 qtde_de_Turings)",
+        "function issueToken(string codinome, uint256 qtde_de_Turings)",
+        "function updateUser(string codinome, address user_addr)",
+        "function votingOn()",
+        "function votingOff()",
+        "event Transfer(address indexed from, address indexed to, uint256 value)"
+    ];
+
+    let provider, signer, contract;
+    let account = "";
+    let decimals = 18;
+    let busy = false;
+    let refreshing = false;
+    let pollId = null;
+    let eventsBound = false;
+    let manualDisconnect = false;
+    const ui = { canVote: false };
+
+    const $ = (id) => document.getElementById(id);
+
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => (
+        { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+    ));
+
+    function setMsg(text, type) {
+        const el = $("msg");
+        el.textContent = text || "";
+        el.className = "msg " + (type || "");
+    }
+
+    // Extrai a mensagem do require do contrato
+    function errMsg(err) {
+        if (err && (err.code === 4001 || err.code === "ACTION_REJECTED")) {
+            return "Transação cancelada na carteira.";
+        }
+        const raw = String(
+            (err && (err.data?.message || err.error?.message || err.reason || err.message)) || err
+        );
+        const m = raw.match(/reverted with reason string '(.*?)'/) || raw.match(/execution reverted: (.*)/);
+        return m ? m[1] : raw;
+    }
+
+    function applyButtons() {
+        $("btnVote").disabled = busy || !ui.canVote;
+        document.querySelectorAll(".act-admin").forEach((b) => { b.disabled = busy; });
+    }
+
+    const SVG_ATTRS = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+    const ICON_COPY = `<svg ${SVG_ATTRS}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+    const ICON_CHECK = `<svg ${SVG_ATTRS}><polyline points="20 6 9 17 4 12"/></svg>`;
+
+    async function copyAddress(btn) {
+        if (!account) return;
+        try {
+            await navigator.clipboard.writeText(account);
+        } catch (e) { // fallback (ex.: página aberta via file://)
+            const t = document.createElement("textarea");
+            t.value = account;
+            document.body.appendChild(t);
+            t.select();
+            document.execCommand("copy");
+            t.remove();
+        }
+        btn.innerHTML = ICON_CHECK;
+        btn.classList.add("done");
+        btn.title = "Copiado!";
+        setTimeout(() => {
+            btn.innerHTML = ICON_COPY;
+            btn.classList.remove("done");
+            btn.title = "Copiar endereço completo";
+        }, 1500);
+    }
+
+    function setOptions(el, items) {
+        const html = items
+            .map((i) => `<option value="${esc(i.value)}"${i.disabled ? " disabled" : ""}>${esc(i.label)}</option>`)
+            .join("");
+        if (el.dataset.html === html) return; // evita fechar o dropdown durante o polling
+        const prev = el.value;
+        el.innerHTML = html;
+        el.dataset.html = html;
+        if (items.some((i) => i.value === prev && !i.disabled)) el.value = prev;
+    }
+
+    // ---------- Conexão ----------
+
+    async function ensureNetwork() {
+        const chainId = parseInt(await window.ethereum.request({ method: "eth_chainId" }), 16);
+        if (chainId === CHAIN_ID) return true;
+
+        const hex = "0x" + CHAIN_ID.toString(16);
+        try {
+            await window.ethereum.request({
+                method: "wallet_switchEthereumChain",
+                params: [{ chainId: hex }]
+            });
+            return true;
+        } catch (e) {
+            if (e.code === 4902) { // rede ainda não cadastrada no MetaMask
+                try {
+                    await window.ethereum.request({
+                        method: "wallet_addEthereumChain",
+                        params: [{
+                            chainId: hex,
+                            chainName: "Hardhat Localhost",
+                            rpcUrls: ["http://127.0.0.1:8545"],
+                            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }
+                        }]
+                    });
+                    return true;
+                } catch (e2) { /* usuária recusou ou falhou */ }
+            }
+            setMsg("Conecte a carteira à rede Hardhat Localhost (chainId 31337, RPC http://127.0.0.1:8545).", "err");
+            return false;
+        }
+    }
+
+    function toggleWallet() {
+        if (contract) disconnectWallet();
+        else connectWallet();
+    }
+
+    async function disconnectWallet() {
+        manualDisconnect = true;
+        resetUI();
+        setMsg("Carteira desconectada.", "info");
+        try { // revoga a permissão do site no MetaMask (versões recentes)
+            await window.ethereum.request({
+                method: "wallet_revokePermissions",
+                params: [{ eth_accounts: {} }]
+            });
+        } catch (e) { /* não suportado: a desconexão vale só nesta página */ }
+    }
+
+    async function connectWallet() {
+        if (!window.ethereum) return setMsg("Instale o MetaMask.", "err");
+        manualDisconnect = false;
+        try {
+            const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+            if (!(await ensureNetwork())) return;
+            await setup(accounts[0]);
+            bindWalletEvents();
+        } catch (err) {
+            setMsg(errMsg(err), "err");
+        }
+    }
+
+    async function setup(acc) {
+        if (contract) contract.removeAllListeners();
+        account = acc;
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner(acc);
+        contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+        if ((await provider.getCode(CONTRACT_ADDRESS)) === "0x") {
+            contract = null;
+            return setMsg("Nenhum contrato nesse endereço. Confira o CONTRACT_ADDRESS e se o deploy foi feito nesta chain.", "err");
+        }
+
+        decimals = await contract.decimals();
+        $("btnConnect").textContent = "Desconectar";
+        $("btnConnect").classList.add("connected");
+        setMsg("");
+
+        await updateUI();
+
+        // Eventos: todo mint/transfer (vote, issueToken, bônus) atualiza o ranking na hora
+        contract.on("Transfer", () => updateUI());
+
+        // Polling de fallback (status da votação, updateUser etc.)
+        clearInterval(pollId);
+        pollId = setInterval(updateUI, 3000);
+    }
+
+    function resetUI() {
+        clearInterval(pollId);
+        if (contract) contract.removeAllListeners();
+        contract = null;
+        account = "";
+        ui.canVote = false;
+        $("btnConnect").textContent = "Conectar carteira";
+        $("btnConnect").classList.remove("connected");
+        $("voteHint").textContent = "";
+        $("whoami").textContent = "";
+        $("whoami").dataset.html = "";
+        $("roleDisplay").textContent = "-";
+        $("statusDisplay").textContent = "-";
+        $("statusDisplay").className = "value status";
+        $("balanceDisplay").textContent = "0";
+        $("votesDisplay").textContent = "-";
+        $("adminPanel").style.display = "none";
+        $("rankingTable").innerHTML = '<tr><td colspan="3" class="empty">Conecte a carteira para ver o ranking.</td></tr>';
+        $("voteBox").style.display = "block";
+        applyButtons();
+    }
+
+    function bindWalletEvents() {
+        if (eventsBound) return;
+        eventsBound = true;
+        window.ethereum.on("accountsChanged", (accs) => {
+            if (manualDisconnect) return; // desconectou de propósito: só reconecta pelo botão
+            if (accs.length) setup(accs[0]);
+            else resetUI();
+        });
+        window.ethereum.on("chainChanged", () => window.location.reload());
+    }
+
+    // ---------- Leitura / UI ----------
+
+    async function updateUI() {
+        if (!contract || refreshing) return;
+        refreshing = true;
+        try {
+            const [owner, professora, myName, voting, balance] = await Promise.all([
+                contract.owner(),
+                contract.users(PROFESSORA),
+                contract.codinomeOf(account),
+                contract.voting(),
+                contract.balanceOf(account)
+            ]);
+
+            const me = account.toLowerCase();
+            const isAdmin = me === owner.toLowerCase() || me === professora.toLowerCase();
+            const isUser = myName !== "";
+            const votes = isUser ? (await contract.userVotedNtimes(myName)).toNumber() : 0;
+
+            const rows = await Promise.all(CODINOMES.map(async (c) => {
+                const addr = await contract.users(c);
+                const known = addr !== ethers.constants.AddressZero;
+                return {
+                    codinome: c,
+                    known,
+                    balance: known ? await contract.balanceOf(addr) : ethers.constants.Zero,
+                    voted: isUser && known ? await contract.hasVote(myName, c) : false
+                };
+            }));
+
+            // Cabeçalho
+            const who = isUser ? myName : (isAdmin ? "Owner" : "Não autorizado");
+            const whoHtml = `Logado como <strong>${esc(who)}</strong> <span class="addr" title="${esc(account)}">(${account.slice(0, 6)}...${account.slice(-4)})</span><button type="button" class="copy" onclick="copyAddress(this)" title="Copiar endereço completo" aria-label="Copiar endereço">${ICON_COPY}</button>`;
+            if ($("whoami").dataset.html !== whoHtml) { // não recria o botão a cada polling
+                $("whoami").innerHTML = whoHtml;
+                $("whoami").dataset.html = whoHtml;
+            }
+            $("roleDisplay").textContent = isAdmin ? "Superusuário" : (isUser ? "Aluno" : "Sem permissão");
+            $("statusDisplay").textContent = voting ? "Ativa" : "Pausada";
+            $("statusDisplay").className = "value status " + (voting ? "on" : "off");
+            $("balanceDisplay").textContent = ethers.utils.formatUnits(balance, decimals);
+            $("votesDisplay").textContent = isUser
+                ? `${votes} dado(s) · bônus em ${10 - (votes % 10)}`
+                : "-";
+            $("adminPanel").style.display = isAdmin ? "block" : "none";
+            // Superusuário sem registro não vota: só vê o painel admin
+            $("voteBox").style.display = (isUser || !isAdmin) ? "block" : "none";
+
+            // Votação
+            ui.canVote = isUser && voting;
+            $("voteHint").textContent = !isUser
+                ? "Seu endereço não está autorizado a votar."
+                : (!voting ? "A votação está pausada." : "");
+
+            // Professora nunca aparece como destino de voto/emissão nem no ranking
+            const students = rows.filter((r) => r.known && r.codinome !== PROFESSORA);
+
+            setOptions($("voteCandidate"), students
+                .filter((r) => r.codinome !== myName)
+                .map((r) => ({
+                    value: r.codinome,
+                    label: r.voted ? `${r.codinome} (já votou)` : r.codinome,
+                    disabled: r.voted
+                })));
+
+            setOptions($("issueTarget"), students
+                .map((r) => ({ value: r.codinome, label: r.codinome })));
+
+            // Ranking
+            const sorted = [...students].sort((a, b) =>
+                a.balance.gt(b.balance) ? -1 : (a.balance.lt(b.balance) ? 1 : 0));
+            const val = (b) => parseFloat(ethers.utils.formatUnits(b, decimals));
+            const max = sorted.length ? val(sorted[0].balance) : 0;
+            $("rankingTable").innerHTML = sorted.length ? sorted.map((r, i) => `
+                <tr class="${i === 0 && max > 0 ? "first " : ""}${r.codinome === myName ? "me" : ""}">
+                    <td class="pos">${i + 1}</td>
+                    <td class="name">${esc(r.codinome)}</td>
+                    <td class="score">
+                        <div class="bar"><span style="width:${max > 0 ? (val(r.balance) / max) * 100 : 0}%"></span></div>
+                        <span class="num">${ethers.utils.formatUnits(r.balance, decimals)} TUR</span>
+                    </td>
+                </tr>
+            `).join("") : '<tr><td colspan="3" class="empty">Nenhum aluno cadastrado.</td></tr>';
+
+            applyButtons();
+        } catch (err) {
+            console.error(err);
+            setMsg(errMsg(err), "err");
+        } finally {
+            refreshing = false;
+        }
+    }
+
+    // ---------- Transações ----------
+
+    async function sendTx(fn, okMsg) {
+        if (!contract || busy) return;
+        busy = true;
+        applyButtons();
+        try {
+            setMsg("Confirme a transação na carteira...", "info");
+            const tx = await fn();
+            setMsg("Transação enviada, aguardando confirmação...", "info");
+            await tx.wait();
+            setMsg(okMsg, "ok");
+        } catch (err) {
+            setMsg(errMsg(err), "err");
+        } finally {
+            busy = false;
+            applyButtons();
+            await updateUI();
+        }
+    }
+
+    function handleVote() {
+        const cand = $("voteCandidate").value;
+        const amount = parseInt($("voteAmount").value, 10);
+        if (!cand) return setMsg("Escolha um aluno.", "err");
+        if (!(amount >= 1 && amount <= 2)) return setMsg("Informe 1 ou 2 Turings.", "err");
+        sendTx(() => contract.vote(cand, amount), "Voto registrado!");
+    }
+
+    function handleIssue() {
+        const target = $("issueTarget").value;
+        const amount = parseInt($("issueAmount").value, 10);
+        if (!target) return setMsg("Escolha um aluno.", "err");
+        if (!(amount >= 1)) return setMsg("A quantidade deve ser maior que 0.", "err");
+        sendTx(() => contract.issueToken(target, amount), "Tokens emitidos!");
+    }
+
+    function handleSetVoting(enable) {
+        sendTx(
+            () => (enable ? contract.votingOn() : contract.votingOff()),
+            enable ? "Votação ativada." : "Votação pausada."
+        );
+    }
+
+    function handleUpdateUser() {
+        const name = $("updName").value.trim();
+        const addr = $("updAddr").value.trim();
+        if (!name) return setMsg("O codinome não pode ser vazio.", "err");
+        if (!ethers.utils.isAddress(addr)) return setMsg("Endereço inválido.", "err");
+        if (!CODINOMES.includes(name)) CODINOMES.push(name); // passa a aparecer nas listas
+        sendTx(() => contract.updateUser(name, addr), "Usuário atualizado!");
+    }
+
+    window.onload = () => applyButtons();
+</script>
+</body>
+</html>
