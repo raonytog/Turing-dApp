@@ -69,4 +69,8 @@ contract Turing is ERC20 {
         _mintTuring(users[codinome], qtde_de_Turings);
         if (userVotedNtimes[voter] % 10 == 0) _mintTuring(msg.sender, 1);
     }
+
+    function decimals() public pure override returns (uint8) {
+        return 0;
+    }
 }

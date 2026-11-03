@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/home/rtgomes/Documents/Turing-dApp/contracts/Turing.sol": {
-      "lastModificationDate": 1793739215135,
-      "contentHash": "e828bce7b60f4c51478d07ff6feaf93e",
+      "lastModificationDate": 1793741864467,
+      "contentHash": "3a6ee40c5effae93ced96f8a6e43e7e7",
       "sourceName": "contracts/Turing.sol",
       "solcConfig": {
         "version": "0.8.17",
