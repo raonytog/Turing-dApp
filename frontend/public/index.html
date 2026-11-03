@@ -500,13 +500,15 @@
                 ? `${votes} dado(s) · bônus em ${10 - (votes % 10)}`
                 : "-";
             $("adminPanel").style.display = isAdmin ? "block" : "none";
-            // Superusuário sem registro não vota: só vê o painel admin
-            $("voteBox").style.display = (isUser || !isAdmin) ? "block" : "none";
+            // Superusuário também vota: a caixa de voto aparece para todos
+            $("voteBox").style.display = "block";
 
             // Votação
-            ui.canVote = isUser && voting;
+            ui.canVote = voting && (isUser || isAdmin);
             $("voteHint").textContent = !isUser
-                ? "Seu endereço não está autorizado a votar."
+                ? (isAdmin
+                    ? "Seu endereço não está em users: o contrato recusa o voto até você ser registrado (Atualizar usuário)."
+                    : "Seu endereço não está autorizado a votar.")
                 : (!voting ? "A votação está pausada." : "");
 
             // Professora nunca aparece como destino de voto/emissão nem no ranking
