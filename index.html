@@ -1,94 +1,255 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>dApp Turing</title>
-    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
-    <style>
-        body { font-family: sans-serif; max-width: 500px; margin: 30px auto; padding: 20px; line-height: 1.5; }
-        .box { border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .admin { border-color: #d9534f; background-color: #fff8f8; display: none; }
-        label { display: block; margin-top: 10px; font-weight: bold; }
-        select, input, button { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; }
-        button:hover { background: #0056b3; }
-        .btn-red { background: #dc3545; }
-        .btn-green { background: #28a745; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dApp Turing</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg: #eef0f6;
+        --surface: #ffffff;
+        --ink: #14172b;
+        --ink-soft: #4a4f6a;
+        --line: #d5d9e8;
+        --brand: #2f33c9;
+        --brand-dark: #23269c;
+        --coin: #f2b51d;
+        --coin-ink: #3d2c00;
+        --ok: #12794a;
+        --ok-bg: #dff5e9;
+        --bad: #b3261e;
+        --bad-bg: #fde4e2;
+        --admin-bg: #fff4f3;
+        --admin-line: #e8aaa5;
+        --radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
+        font-size: 16px;
+        line-height: 1.5;
+    }
+
+    /* Cabeçalho */
+    header {
+        background: var(--brand);
+        color: #fff;
+        padding: 22px 20px 70px;
+    }
+    .wrap { max-width: 560px; margin: 0 auto; }
+    .logo {
+        display: flex; align-items: center; gap: 12px;
+        font-size: 1.9rem; font-weight: 800; letter-spacing: -0.02em;
+        color: #fff;
+    }
+    .logo-coin {
+        width: 40px; height: 40px; border-radius: 50%;
+        background: var(--coin); color: var(--coin-ink);
+        display: grid; place-items: center;
+        font-size: 1.3rem; font-weight: 800;
+        box-shadow: inset 0 0 0 3px rgba(61,44,0,.25);
+    }
+    .tagline { margin: 4px 0 0 52px; color: #dfe1ff; font-size: .95rem; }
+
+    main { max-width: 560px; margin: -46px auto 40px; padding: 0 16px; }
+
+    .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 18px;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 2px rgba(20,23,43,.06);
+    }
+    .card h3 { margin: 0 0 12px; font-size: 1.15rem; font-weight: 800; }
+    .card.admin { background: var(--admin-bg); border-color: var(--admin-line); display: none; }
+
+    /* Sessão / usuário */
+    .who { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .avatar {
+        width: 48px; height: 48px; border-radius: 50%;
+        background: var(--ink); color: #fff;
+        display: grid; place-items: center;
+        font-weight: 800; font-size: 1.2rem; flex: none;
+    }
+    .who-info { flex: 1; min-width: 160px; }
+    .who-name { font-size: 1.2rem; font-weight: 800; color: var(--ink); }
+    .who-addr { font-size: .85rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+    .badge {
+        display: inline-block; padding: 2px 10px; border-radius: 999px;
+        font-size: .8rem; font-weight: 600; margin-left: 6px; vertical-align: middle;
+        background: #e6e8f5; color: var(--ink);
+    }
+    .badge.admin { background: var(--bad-bg); color: var(--bad); }
+
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    .stat { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+    .stat-label { font-size: .85rem; color: var(--ink-soft); }
+    .stat-value { font-size: 1.4rem; font-weight: 800; color: var(--ink); }
+    .stat-value small { font-size: .9rem; font-weight: 600; color: var(--ink-soft); }
+    .pill-on  { color: var(--ok); }
+    .pill-off { color: var(--bad); }
+
+    /* Formulários */
+    label { display: block; margin-top: 12px; font-weight: 600; font-size: .95rem; color: var(--ink); }
+    select, input {
+        width: 100%; margin-top: 6px; padding: 10px 12px;
+        font: inherit; color: var(--ink); background: #fff;
+        border: 1px solid #aab0cc; border-radius: 8px;
+    }
+    select:focus, input:focus, button:focus-visible {
+        outline: 3px solid #9fa2ff; outline-offset: 1px;
+    }
+    button {
+        width: 100%; margin-top: 14px; padding: 11px 14px;
+        font: inherit; font-weight: 600; color: #fff;
+        background: var(--brand); border: 0; border-radius: 8px; cursor: pointer;
+        transition: background .15s;
+    }
+    button:hover:not(:disabled) { background: var(--brand-dark); }
+    button:disabled { opacity: .55; cursor: wait; }
+    .btn-green { background: var(--ok); }
+    .btn-green:hover:not(:disabled) { background: #0d5c37; }
+    .btn-red { background: var(--bad); }
+    .btn-red:hover:not(:disabled) { background: #8c1c16; }
+    .btn-ghost { background: #fff; color: var(--brand); border: 2px solid var(--brand); }
+    .btn-ghost:hover:not(:disabled) { background: #eceeff; }
+    .row { display: flex; gap: 10px; }
+
+    /* Ranking */
+    .rank { list-style: none; margin: 0; padding: 0; }
+    .rank li {
+        display: grid; grid-template-columns: 2rem 1fr auto; align-items: center; gap: 10px;
+        padding: 10px 0; border-top: 1px solid var(--line);
+    }
+    .rank li:first-child { border-top: 0; }
+    .pos { font-weight: 800; color: var(--ink-soft); text-align: center; }
+    .rank li:first-child .pos { color: var(--coin-ink); background: var(--coin); border-radius: 50%; width: 1.8rem; height: 1.8rem; line-height: 1.8rem; }
+    .rank-name { font-weight: 600; color: var(--ink); }
+    .bar { height: 6px; border-radius: 3px; background: #e6e8f5; margin-top: 4px; overflow: hidden; }
+    .bar > span { display: block; height: 100%; background: var(--brand); }
+    .rank-val { font-weight: 800; font-variant-numeric: tabular-nums; }
+    .empty { color: var(--ink-soft); margin: 0; }
+
+    /* Aviso de rede + toast */
+    .notice {
+        display: none; margin-bottom: 16px; padding: 12px 14px; border-radius: var(--radius);
+        background: #fff3cd; color: #4a3700; border: 1px solid #e9c75a; font-size: .95rem;
+    }
+    .notice button { margin-top: 10px; background: #4a3700; }
+    #toast {
+        position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+        max-width: min(92vw, 520px); padding: 12px 16px; border-radius: 10px;
+        font-weight: 600; display: none; z-index: 10;
+        box-shadow: 0 6px 20px rgba(20,23,43,.25);
+    }
+    #toast.ok  { background: var(--ok-bg);  color: var(--ok);  border: 1px solid var(--ok); }
+    #toast.err { background: var(--bad-bg); color: var(--bad); border: 1px solid var(--bad); }
+</style>
 </head>
 <body>
 
+<header>
+    <div class="wrap">
+        <div class="logo"><span class="logo-coin">T</span>dApp Turing</div>
+        <p class="tagline">Vote nos projetos usando seus Turings</p>
+    </div>
+</header>
 
-    <h2>dApp Turing</h2>
-
-
-    <!-- Conexão -->
-    <div class="box">
-        <button id="btnConnect" onclick="connectWallet()">Conectar Carteira</button>
-        <p><strong>Usuário:</strong> <span id="userDisplay">-</span> | <strong>Perfil:</strong> <span id="roleDisplay">-</span></p>
-        <p><strong>Votação:</strong> <span id="statusDisplay">-</span> | <strong>Seu Saldo:</strong> <span id="balanceDisplay">0</span> TUR</p>
+<main>
+    <div id="networkNotice" class="notice">
+        <span id="networkMsg"></span>
+        <button onclick="switchNetwork()">Trocar para a rede Hardhat</button>
     </div>
 
+    <!-- Sessão -->
+    <section class="card">
+        <div class="who">
+            <div class="avatar" id="avatar">?</div>
+            <div class="who-info">
+                <div class="who-name">
+                    <span id="userDisplay">Não conectado</span>
+                    <span class="badge" id="roleDisplay">-</span>
+                </div>
+                <div class="who-addr" id="addrDisplay">Conecte sua carteira para começar</div>
+            </div>
+        </div>
 
-    <!-- Votação (Para todos) -->
-    <div class="box">
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-label">Seu saldo</div>
+                <div class="stat-value"><span id="balanceDisplay">0</span> <small>TUR</small></div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Votação</div>
+                <div class="stat-value" id="statusDisplay">-</div>
+            </div>
+        </div>
+
+        <button id="btnConnect" onclick="connectWallet()">Conectar carteira</button>
+    </section>
+
+    <!-- Votação -->
+    <section class="card">
         <h3>Votar</h3>
-        <label>Aluno:</label>
+        <label for="voteCandidate">Aluno</label>
         <select id="voteCandidate"></select>
 
+        <label for="voteAmount">Turings (1 ou 2)</label>
+        <select id="voteAmount">
+            <option value="1">1 Turing</option>
+            <option value="2">2 Turings</option>
+        </select>
 
-        <label>Turings (1 ou 2):</label>
-        <input type="number" id="voteAmount" min="1" max="2" value="1">
+        <button id="btnVote" onclick="handleVote()">Enviar voto</button>
+    </section>
 
+    <!-- Admin -->
+    <section id="adminPanel" class="card admin">
+        <h3>Painel do administrador</h3>
 
-        <button onclick="handleVote()">Enviar Voto</button>
-    </div>
-
-
-    <!-- Painel do Admin (Apenas Superusuário/Professora) -->
-    <div id="adminPanel" class="box admin">
-        <h3>⚡ Painel Admin</h3>
-        
-        <label>Emitir para Aluno:</label>
+        <label for="issueTarget">Emitir para o aluno</label>
         <select id="issueTarget"></select>
 
-
-        <label>Quantidade:</label>
+        <label for="issueAmount">Quantidade</label>
         <input type="number" id="issueAmount" min="1" value="5">
 
+        <button id="btnIssue" onclick="handleIssue()">Emitir tokens</button>
 
-        <button onclick="handleIssue()" style="margin-bottom: 10px;">Emitir Tokens</button>
-
-
-        <div style="display: flex; gap: 10px;">
-            <button onclick="handleSetVoting(true)" class="btn-green">Ativar Votação</button>
-            <button onclick="handleSetVoting(false)" class="btn-red">Pausar Votação</button>
+        <div class="row">
+            <button id="btnOn" onclick="handleSetVoting(true)" class="btn-green">Ativar votação</button>
+            <button id="btnOff" onclick="handleSetVoting(false)" class="btn-red">Pausar votação</button>
         </div>
-    </div>
-
+    </section>
 
     <!-- Ranking -->
-    <div class="box">
+    <section class="card">
         <h3>Ranking</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Codinome</th>
-                    <th>Saldo (TUR)</th>
-                </tr>
-            </thead>
-            <tbody id="rankingTable">
-                <tr><td colspan="2">Conecte a carteira...</td></tr>
-            </tbody>
-        </table>
-    </div>
+        <ol class="rank" id="rankingList">
+            <li><span></span><span class="empty">Conecte a carteira para ver o ranking.</span><span></span></li>
+        </ol>
+    </section>
+</main>
 
+<div id="toast" role="status"></div>
 
 <script>
     const CONTRACT_ADDRESS = "SEU_ENDERECO_DO_CONTRATO_AQUI";
 
+    // Rede local Hardhat (ajuste se usar outra)
+    const NETWORK = {
+        chainId: "0x7a69", // 31337
+        chainName: "Hardhat Local",
+        rpcUrls: ["http://127.0.0.1:8545"],
+        nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }
+    };
 
     const CONTRACT_ABI = [
         "function voting() view returns (bool)",
@@ -100,7 +261,6 @@
         "function votingOff()"
     ];
 
-
     const USERS = [
         { codinome: "roberta", address: "0x502542668aF09fa7aea52174b9965A7799343Df7", isTeacher: true },
         { codinome: "nome1",   address: "0x70997970c51812dc3a010c7d01b50e0d17dc79c8", isTeacher: false },
@@ -110,107 +270,156 @@
         { codinome: "nome5",   address: "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc", isTeacher: false }
     ];
 
-
     let provider, signer, contract, currentAccount = "";
 
+    const $ = id => document.getElementById(id);
+    const short = a => a.slice(0, 6) + "…" + a.slice(-4);
 
     window.onload = () => {
-        // Popula selects sem a professora
         const students = USERS.filter(u => !u.isTeacher);
-        const optionsHtml = students.map(s => <option value="${s.codinome}">${s.codinome}</option>).join("");
-        document.getElementById("voteCandidate").innerHTML = optionsHtml;
-        document.getElementById("issueTarget").innerHTML = optionsHtml;
+        const optionsHtml = students.map(s => `<option value="${s.codinome}">${s.codinome}</option>`).join("");
+        $("voteCandidate").innerHTML = optionsHtml;
+        $("issueTarget").innerHTML = optionsHtml;
+
+        if (window.ethereum) {
+            window.ethereum.on("accountsChanged", () => location.reload());
+            window.ethereum.on("chainChanged", () => location.reload());
+        }
     };
 
-
-    async function connectWallet() {
-        if (!window.ethereum) return alert("Instale o MetaMask!");
-        provider = new ethers.providers.Web3Provider(window.ethereum);
-        const accounts = await provider.send("eth_requestAccounts", []);
-        currentAccount = accounts[0];
-        
-        signer = provider.getSigner();
-        contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-
-
-        await updateUI();
+    function toast(msg, type = "ok") {
+        const t = $("toast");
+        t.textContent = msg;
+        t.className = type;
+        t.style.display = "block";
+        clearTimeout(toast._t);
+        toast._t = setTimeout(() => t.style.display = "none", 5000);
     }
 
+    function friendlyError(err) {
+        const raw = (err && (err.reason || (err.error && err.error.message) || (err.data && err.data.message) || err.message)) || String(err);
+        if (err && (err.code === 4001 || err.code === "ACTION_REJECTED")) return "Transação cancelada na carteira.";
+        if (/nonce/i.test(raw)) return "Nonce desatualizado. No MetaMask: Configurações > Avançado > Limpar dados da aba de atividade, e tente de novo.";
+        if (/maxFeePerGas|max fee|gas price|baseFee|underpriced|gas fee/i.test(raw)) return "Taxa de gas rejeitada pela rede. Tente de novo (a taxa é recalculada a cada envio).";
+        if (/insufficient funds/i.test(raw)) return "Essa conta não tem ETH suficiente para pagar o gas.";
+        return raw.replace(/^execution reverted:?\s*/i, "").slice(0, 200);
+    }
+
+    async function checkNetwork() {
+        const net = await provider.getNetwork();
+        const ok = "0x" + net.chainId.toString(16) === NETWORK.chainId;
+        $("networkNotice").style.display = ok ? "none" : "block";
+        if (!ok) $("networkMsg").textContent = `Você está na rede ${net.chainId}. Este dApp usa a rede Hardhat Local (31337).`;
+        return ok;
+    }
+
+    async function switchNetwork() {
+        try {
+            await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: NETWORK.chainId }] });
+        } catch (e) {
+            if (e.code === 4902 || (e.data && e.data.originalError && e.data.originalError.code === 4902)) {
+                await window.ethereum.request({ method: "wallet_addEthereumChain", params: [NETWORK] });
+            } else { toast(friendlyError(e), "err"); }
+        }
+    }
+
+    async function connectWallet() {
+        if (!window.ethereum) return toast("Instale o MetaMask!", "err");
+        try {
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            const accounts = await provider.send("eth_requestAccounts", []);
+            currentAccount = accounts[0];
+
+            signer = provider.getSigner();
+            contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+            if (!(await checkNetwork())) return;
+            await updateUI();
+        } catch (err) { toast(friendlyError(err), "err"); }
+    }
 
     async function updateUI() {
-        // Identifica perfil
         const user = USERS.find(u => u.address.toLowerCase() === currentAccount.toLowerCase());
         const owner = await contract.owner();
         const isAdmin = (user && user.isTeacher) || currentAccount.toLowerCase() === owner.toLowerCase();
 
+        const name = user ? user.codinome : "Desconhecido";
+        $("userDisplay").textContent = name;
+        $("avatar").textContent = name[0].toUpperCase();
+        $("addrDisplay").textContent = short(currentAccount);
 
-        document.getElementById("userDisplay").innerText = user ? user.codinome : "Desconhecido";
-        document.getElementById("roleDisplay").innerText = isAdmin ? "Superusuário" : "Comum";
-        document.getElementById("adminPanel").style.display = isAdmin ? "block" : "none";
+        const role = $("roleDisplay");
+        role.textContent = isAdmin ? "Superusuário" : "Comum";
+        role.className = "badge" + (isAdmin ? " admin" : "");
+        $("adminPanel").style.display = isAdmin ? "block" : "none";
+        $("btnConnect").style.display = "none";
 
-
-        // Saldo e Status
         const balance = await contract.balanceOf(currentAccount);
-        document.getElementById("balanceDisplay").innerText = balance.toString();
+        $("balanceDisplay").textContent = balance.toString();
 
+        const active = await contract.voting();
+        const st = $("statusDisplay");
+        st.textContent = active ? "Ativa" : "Pausada";
+        st.className = "stat-value " + (active ? "pill-on" : "pill-off");
 
-        const isVotingActive = await contract.voting();
-        document.getElementById("statusDisplay").innerText = isVotingActive ? "Ativa 🟢" : "Pausada 🔴";
-
-
-        // Ranking via polling
         await updateRanking();
     }
 
+    // Calcula gas e taxas na hora do envio (evita erro de gas em outro PC/rede reiniciada)
+    async function send(method, args) {
+        const overrides = {};
+        const gas = await contract.estimateGas[method](...args);
+        overrides.gasLimit = gas.mul(130).div(100);
 
-    async function handleVote() {
-        try {
-            const cand = document.getElementById("voteCandidate").value;
-            const amount = document.getElementById("voteAmount").value;
-            const tx = await contract.vote(cand, amount);
-            await tx.wait();
-            alert("Voto registrado!");
-            await updateUI();
-        } catch (err) { alert("Erro: " + (err.reason || err.message)); }
+        const fee = await provider.getFeeData();
+        if (fee.maxFeePerGas) {
+            overrides.maxFeePerGas = fee.maxFeePerGas.mul(2);
+            overrides.maxPriorityFeePerGas = fee.maxPriorityFeePerGas || ethers.utils.parseUnits("1", "gwei");
+        } else if (fee.gasPrice) {
+            overrides.gasPrice = fee.gasPrice.mul(2);
+        }
+        const tx = await contract[method](...args, overrides);
+        await tx.wait();
     }
 
-
-    async function handleIssue() {
+    async function run(btnId, fn, okMsg) {
+        const btn = $(btnId);
+        btn.disabled = true;
         try {
-            const target = document.getElementById("issueTarget").value;
-            const amount = document.getElementById("issueAmount").value;
-            const tx = await contract.issueToken(target, amount);
-            await tx.wait();
-            alert("Tokens emitidos!");
+            await fn();
+            toast(okMsg, "ok");
             await updateUI();
-        } catch (err) { alert("Erro: " + (err.reason || err.message)); }
+        } catch (err) {
+            toast("Erro: " + friendlyError(err), "err");
+        } finally { btn.disabled = false; }
     }
 
+    const handleVote = () => run("btnVote",
+        () => send("vote", [$("voteCandidate").value, $("voteAmount").value]), "Voto registrado!");
 
-    async function handleSetVoting(enable) {
-        try {
-            const tx = enable ? await contract.votingOn() : await contract.votingOff();
-            await tx.wait();
-            await updateUI();
-        } catch (err) { alert("Erro: " + (err.reason || err.message)); }
-    }
+    const handleIssue = () => run("btnIssue",
+        () => send("issueToken", [$("issueTarget").value, $("issueAmount").value]), "Tokens emitidos!");
 
+    const handleSetVoting = enable => run(enable ? "btnOn" : "btnOff",
+        () => send(enable ? "votingOn" : "votingOff", []), enable ? "Votação ativada." : "Votação pausada.");
 
     async function updateRanking() {
-        const list = [];
-        for (const u of USERS) {
+        const list = await Promise.all(USERS.map(async u => {
             const bal = await contract.balanceOf(u.address);
-            list.push({ codinome: u.codinome, balance: BigInt(bal.toString()) });
-        }
-        list.sort((a, b) => (b.balance > a.balance ? 1 : -1));
+            return { codinome: u.codinome, balance: BigInt(bal.toString()) };
+        }));
+        list.sort((a, b) => (b.balance > a.balance ? 1 : b.balance < a.balance ? -1 : 0));
 
-
-        document.getElementById("rankingTable").innerHTML = list.map(item => `
-            <tr>
-                <td>${item.codinome}</td>
-                <td><strong>${item.balance.toString()} TUR</strong></td>
-            </tr>
-        `).join("");
+        const max = list[0] && list[0].balance > 0n ? list[0].balance : 1n;
+        $("rankingList").innerHTML = list.map((item, i) => `
+            <li>
+                <span class="pos">${i + 1}</span>
+                <div>
+                    <div class="rank-name">${item.codinome}</div>
+                    <div class="bar"><span style="width:${Number(item.balance * 100n / max)}%"></span></div>
+                </div>
+                <span class="rank-val">${item.balance.toString()} TUR</span>
+            </li>`).join("");
     }
 </script>
 </body>
