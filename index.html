@@ -203,10 +203,7 @@
         <select id="voteCandidate"></select>
 
         <label for="voteAmount">Turings (1 ou 2)</label>
-        <select id="voteAmount">
-            <option value="1">1 Turing</option>
-            <option value="2">2 Turings</option>
-        </select>
+        <input type="number" id="voteAmount" min="1" max="2" value="1">
 
         <button id="btnVote" onclick="handleVote()">Enviar voto</button>
     </section>
